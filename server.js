@@ -17,76 +17,69 @@ const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'casheew123';
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    if (!fs.existsSync(UPLOADS_DIR)) {
-      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-    }
-    cb(null, UPLOADS_DIR);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || '');
-    const safeExt = ext || '.jpg';
-    cb(null, `product-${Date.now()}${safeExt}`);
-  }
-});
+const storage = multer.memoryStorage();
+
 
 const upload = multer({ storage });
 
 function ensureDataFiles() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(PRODUCTS_FILE)) {
-    const initialProducts = [
-      {
-        id: 'P001',
-        name: 'Whole Cashew (W320)',
-        description: 'Premium whole cashew nuts, perfect for snacking.',
-        image: '/images/cashew-hero.png',
-        retailPricePerKg: 900,
-        wholesalePricePerKg: 820,
-        isBulkOffer: false
-      },
-      {
-        id: 'P002',
-        name: 'Roasted Salted Cashew',
-        description: 'Crispy roasted cashews with light salt.',
-        image: '/images/cashew-hero.png',
-        retailPricePerKg: 950,
-        wholesalePricePerKg: 870,
-        isBulkOffer: true
-      },
-      {
-        id: 'P003',
-        name: 'Spicy Masala Cashew',
-        description: 'Hot and spicy masala coated cashews.',
-        image: '/images/cashew-hero.png',
-        retailPricePerKg: 980,
-        wholesalePricePerKg: 900,
-        isBulkOffer: true
-      }
-    ];
-    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(initialProducts, null, 2));
-  }
-  if (!fs.existsSync(ORDERS_FILE)) {
-    fs.writeFileSync(ORDERS_FILE, JSON.stringify([], null, 2));
-  }
-  if (!fs.existsSync(SETTINGS_FILE)) {
-    const defaultSettings = {
-      shopName: 'Casheew Nuts & Dry Fruits',
-      phone: '+91 98765 43210',
-      email: 'support@casheew.in',
-      address: 'Chennai, India',
-      whatsappNumber: '919876543210',
-      gstin: '33ABCDE1234F1Z5',
-      paymentQrImage: '',
-      paymentNote: ''
-    };
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2));
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(UPLOADS_DIR)) {
+      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(PRODUCTS_FILE)) {
+      const initialProducts = [
+        {
+          id: 'P001',
+          name: 'Whole Cashew (W320)',
+          description: 'Premium whole cashew nuts, perfect for snacking.',
+          image: '/images/cashew-hero.png',
+          retailPricePerKg: 900,
+          wholesalePricePerKg: 820,
+          isBulkOffer: false
+        },
+        {
+          id: 'P002',
+          name: 'Roasted Salted Cashew',
+          description: 'Crispy roasted cashews with light salt.',
+          image: '/images/cashew-hero.png',
+          retailPricePerKg: 950,
+          wholesalePricePerKg: 870,
+          isBulkOffer: true
+        },
+        {
+          id: 'P003',
+          name: 'Spicy Masala Cashew',
+          description: 'Hot and spicy masala coated cashews.',
+          image: '/images/cashew-hero.png',
+          retailPricePerKg: 980,
+          wholesalePricePerKg: 900,
+          isBulkOffer: true
+        }
+      ];
+      fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(initialProducts, null, 2));
+    }
+    if (!fs.existsSync(ORDERS_FILE)) {
+      fs.writeFileSync(ORDERS_FILE, JSON.stringify([], null, 2));
+    }
+    if (!fs.existsSync(SETTINGS_FILE)) {
+      const defaultSettings = {
+        shopName: 'Casheew Nuts & Dry Fruits',
+        phone: '+91 98765 43210',
+        email: 'support@casheew.in',
+        address: 'Chennai, India',
+        whatsappNumber: '919876543210',
+        gstin: '33ABCDE1234F1Z5',
+        paymentQrImage: '',
+        paymentNote: ''
+      };
+      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2));
+    }
+  } catch (err) {
+    console.warn('Warning: Could not ensure data files (likely read-only filesystem):', err.message);
   }
 }
 
@@ -114,7 +107,11 @@ function readSettings() {
 }
 
 function writeJson(filePath, data) {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error(`Error writing to ${filePath}:`, err.message);
+  }
 }
 
 function generateOrderId() {
@@ -468,7 +465,11 @@ app.use((req, res) => {
   res.status(404).render('404');
 });
 
-app.listen(PORT, () => {
-  console.log(`Casheew website running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Casheew website running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
 
